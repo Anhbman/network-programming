@@ -1,0 +1,11 @@
+The student with the highest mark is: pham hoang anh
+The student with the lowest mark is: pham hoang anh
+The average mark is: 4.50
+
+
+A histogram of the subject it1220 is:
+A:*
+B:
+C:
+D:
+F:

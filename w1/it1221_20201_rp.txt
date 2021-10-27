@@ -1,0 +1,11 @@
+The student with the highest mark is: vip pro
+The student with the lowest mark is: vip pro
+The average mark is: 7.00
+
+
+A histogram of the subject it1221 is:
+A:
+B:*
+C:
+D:
+F:
