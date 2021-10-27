@@ -1,4 +1,4 @@
-w5: udp_server.c udp_client.c
+bai1: udp_server.c udp_client.c
 	gcc -o server udp_server.c
 	gcc -o client udp_client.c
 clean:

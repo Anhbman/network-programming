@@ -4,12 +4,20 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <string.h>
+#include <stdlib.h>
 
-#define SERVER_ADDR "127.0.0.1"
-#define SERVER_PORT 5550
+
+// #define SERVER_ADDR "127.0.0.1"
+//#define SERVER_PORT 5550
 #define BUFF_SIZE 8192
 
-int main(){
+int main(int argc, char* argv[]){
+	if(argc < 3){
+		printf("Please input ADDR and PORT\n");
+		return 0;
+	}
+	int SERVER_PORT = atoi(argv[2]);
+	char *SERVER_ADDR = argv[1];
 	int client_sock;
 	char buff[BUFF_SIZE];
 	struct sockaddr_in server_addr; /* server's address information */
@@ -32,7 +40,7 @@ int main(){
 	//Step 4: Communicate with server			
 	while(1){
 		//send message
-		printf("\nInput username:");
+		printf(" Input username:");
 		memset(buff,'\0',(strlen(buff)+1));
 		fgets(buff, BUFF_SIZE, stdin);		
 		msg_len = strlen(buff);
@@ -46,25 +54,25 @@ int main(){
 		
 		//receive echo reply
 		bytes_received = recv(client_sock, buff, BUFF_SIZE-1, 0);
-		if(bytes_received <= 0){
-			printf("\nError!Cannot receive data from sever!\n");
-			break;
-		}
-		
 		buff[bytes_received] = '\0';
 		if (buff[0] == '0')
 		{
 			printf("Tai khoan khong ton tai!\n");
+			continue;
+		}else if(strncmp("Good",buff,3) == 0){
+			printf("%s\n",buff);
+			send(client_sock, "-1", 2, 0);
 			break;
-		}else{
-			printf("Please input password: ");
+		}
+		else{
+			printf("Password: ");
 			memset(buff,'\0',(strlen(buff)+1));
 			fgets(buff, BUFF_SIZE, stdin);	
 			buff[strlen(buff) -1] = '\0';
 			bytes_sent = send(client_sock, buff, strlen(buff), 0);
 			if(bytes_sent <= 0){
 				printf("\nConnection closed!\n");
-				break;
+			break;
 			}	
 			bytes_received = recv(client_sock, buff, BUFF_SIZE-1, 0);
 			if(bytes_received <= 0){
@@ -72,67 +80,47 @@ int main(){
 				break;
 			}
 			buff[bytes_received] = '\0';
-			if (buff[0] == '1')
-			{
-				printf("Login is sccessful!\n");
-				check = 1;
+			if(buff[0] == '1'){
+				printf("Login is successful!\n");
+				printf("Input bye or");
 				continue;
-			}else{
-				int t = 0;
-				while (1)
-				{
-					printf("Password is not correct. Please try again!\n ");
-					memset(buff,'\0',(strlen(buff)+1));
-					fgets(buff, BUFF_SIZE, stdin);	
-					buff[strlen(buff) -1] = '\0';
-					bytes_sent = send(client_sock, buff, strlen(buff), 0);
-					if(bytes_sent <= 0){
-						printf("\nConnection closed!\n");
-					break;
-					}	
-					bytes_received = recv(client_sock, buff, BUFF_SIZE-1, 0);
-					printf("Buff: %s\n",buff);
-					if(bytes_received <= 0){
-						printf("\nError!Cannot receive data from sever!\n");
-						break;
-					}
-					buff[bytes_received] = '\0';
-					if (buff[0]=='0')
-					{
-						continue;
-					}else if (buff[0]=='2')
-					{
-						printf("Account is blocked!\n");
-						break;
-					}else if(buff[0] == '1'){
-						printf("Login is successful!\n");
-						check = 1;
-						break;
-					}else if(buff[0] == '3'){
-						printf("Account is blocked or inactive!\n");
-						check = 1;
-						break;
-					}
-				}
-				
+			}else if(buff[0] == '3'){
+				printf("Account is blocked or inactive!\n");
+				continue;
 			}
-			
+			int t = 0;
+			do
+			{
+				t++;
+				printf("Password is not correct. Please try again! ");
+				memset(buff,'\0',(strlen(buff)+1));
+				fgets(buff, BUFF_SIZE, stdin);	
+				buff[strlen(buff) -1] = '\0';
+				bytes_sent = send(client_sock, buff, strlen(buff), 0);
+				if(bytes_sent <= 0){
+					printf("\nConnection closed!\n");
+				break;
+				}	
+				bytes_received = recv(client_sock, buff, BUFF_SIZE-1, 0);
+				if(bytes_received <= 0){
+					printf("\nError!Cannot receive data from sever!\n");
+					break;
+				}
+				buff[bytes_received] = '\0';
+				if (buff[0]=='2')
+				{
+					printf("Account is blocked!\n");
+					break;
+				}else if(buff[0] == '1'){
+					printf("Login is successful!\n\n");
+					printf("Input bye or");
+					break;
+				}else if(buff[0] == '3'){
+					printf("Account is blocked or inactive!\n");
+					break;
+				}
+			}while(t<3);
 		}
-		// printf("Input username: ");
-		// memset(buff,'\0',(strlen(buff)+1));
-		// fgets(buff, BUFF_SIZE, stdin);	
-		// bytes_sent = send(client_sock, buff, strlen(buff), 0);
-		// if(bytes_sent <= 0){
-		// 	printf("\nConnection closed!\n");
-		// break;
-		// }	
-		// bytes_received = recv(client_sock, buff, BUFF_SIZE-1, 0);
-		// if(bytes_received <= 0){
-		// 	printf("\nError!Cannot receive data from sever!\n");
-		// 	break;
-		// }
-		// buff[bytes_received] = '\0';
-		// if
 	}
 	
 	//Step 4: Close socket

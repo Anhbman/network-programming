@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define PORT 5550   /* Port that will be opened */ 
+//#define PORT 5550   /* Port that will be opened */ 
 #define BACKLOG 2   /* Number of allowed connections */
 #define BUFF_SIZE 1024
 
@@ -16,6 +16,8 @@ typedef struct account{
 	char password[20];
 	int status;
 }account;
+
+int n = 0;
 
 account* DocFile(account acc[]){
 	FILE *fp = NULL;
@@ -31,25 +33,22 @@ account* DocFile(account acc[]){
 		if(strlen(a) < 3){
 			continue;
 		}
-		sscanf(a,"%s %s %d",acc[i].username,acc[i].password,&acc[i].status);
-		printf("%s\t%s\t%d\n",acc[i].username,acc[i].password,acc[i].status);
-		i++;
+		sscanf(a,"%s %s %d",acc[n].username,acc[n].password,&acc[n].status);
+		n ++;
 	}
-	
+	//printf("%d\n",i);
 	fclose(fp);
 	free(a);
 	return acc;
 }
 
 int checkUserName(account acc[], char username[]){
-	printf("%d\n",strlen(username));
-	for (int i = 0; i < 200; i++)
+	for (int i = 0; i < n; i++)
 	{
 		if(acc[i].username[0] == '\0')
 		{
 			break;
 		}
-		printf("%s %d\n",acc[i].username,strlen(acc[i].username));
 		if(strcmp(username,acc[i].username) == 0)
 			return i;
 	}
@@ -63,8 +62,24 @@ int checkPass(account acc, char pass[]){
 	return -1;
 }
 
+int ghi_file(account tk[]){
+	FILE *fp = fopen("account.txt", "w");
+	for (int i = 0; i < n; i++)
+	{
+		fprintf(fp, "%s %s %d\n", tk[i].username, tk[i].password, tk[i].status);
+	}
+	fclose(fp);
+	return 0;
+	
+}
+
 int main(int argc, char* argv[])
 {
+	if(argc == 1){
+		printf("Please input port number\n");
+		return 0;
+	}
+	int PORT = atoi(argv[1]);
 	account* acc = (account*)malloc(sizeof(account)*200);
 	acc = DocFile(acc);
 	int listen_sock, conn_sock; /* file descriptors */
@@ -79,7 +94,7 @@ int main(int argc, char* argv[])
 		perror("\nError: ");
 		return 0;
 	}
-	
+	int f = 0;
 	//Step 2: Bind address to socket
 	bzero(&server, sizeof(server));
 	server.sin_family = AF_INET;         
@@ -106,63 +121,75 @@ int main(int argc, char* argv[])
 		printf("You got a connection from %s\n", inet_ntoa(client.sin_addr) ); /* prints client's IP */
 		
 		//start conversation
+		int k = -1;
+		char a[30];
+		strcpy(a,"Goodbye ");
+		int aa = -1;
 		while(1){
 			//receives message from client
+			// Nhan username
 			bytes_received = recv(conn_sock, recv_data, BUFF_SIZE-1, 0); //blocking
 			if (bytes_received <= 0){
 				printf("\nConnection closed");
 				break;
 			}
-			else{
-				int check = 0;
-				recv_data[bytes_received] = '\0';
-				int k = checkUserName(acc,recv_data);
-				printf(" k = %d",k);
-				if(k == -1){
-					strcpy(recv_data,"0");
-					bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
-				}else{
-					strcpy(recv_data,"1");
-					bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
-					for (int i = 0; i < 3; i++)
-					{
-						bytes_received = recv(conn_sock, recv_data, BUFF_SIZE-1, 0); //blocking
-						if (bytes_received <= 0){
-							printf("\nConnection closed");
-							break;
-						}
-						recv_data[bytes_received] = '\0';
-						if(checkPass(acc[k],recv_data) == 1){
-							check = 1;
-							break;
-						}
-						strcpy(recv_data,"0");
-						bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+			int check = 0;
+			recv_data[bytes_received] = '\0';
+			if(strncmp("bye",recv_data,3) == 0 && k != -1 && acc[k].status != 0 && aa == 0){
+				strcat(a,acc[k].username);
+				send(conn_sock, a, strlen(a), 0);
+				f=-1;
+				break;
+			}
+			k = checkUserName(acc,recv_data);
+			if(k == -1){
+				strcpy(recv_data,"0");
+				bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+				continue;
+			}else{
+				aa = -1;
+				//Thong bao co tk ton tai
+				strcpy(recv_data,"1");
+				bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+				//Nhan mat khau
+				int tmp = 0;
+				for(int i =0; i <3; i++)
+				{
+					bytes_received = recv(conn_sock, recv_data, BUFF_SIZE-1, 0); //blocking
+					if (bytes_received <= 0){
+						printf("\nConnection closed");
+						break;
 					}
-					if(check == 0){
-						strcpy(recv_data,"2");
-						bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
-						acc[k].status = 0;
-					}else if(check == 1 && acc[k].status == 1){
-						strcpy(recv_data,"1");
-						bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
-					}else if(check == 1 && acc[k].status == 0){
-						strcpy(recv_data,"3");
-						bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+					recv_data[bytes_received] = '\0';
+					if(checkPass(acc[k],recv_data) == 1){
+						if(acc[k].status == 1){
+							strcpy(recv_data,"1");
+							aa= 0;
+							send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+						}else{
+							strcpy(recv_data,"3");
+							send(conn_sock, recv_data, bytes_received, 0); 
+						}
+						break;
+					}else{
+						if(i == 2){
+							strcpy(recv_data,"2");
+							acc[k].status = 0;
+							send(conn_sock, recv_data, bytes_received, 0);
+						}else{
+							strcpy(recv_data,"0");
+							send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
+						}
 					}
 				}
+				
 			}
-			
-			//echo to client
-			// bytes_sent = send(conn_sock, recv_data, bytes_received, 0); /* send to the client welcome message */
-			// if (bytes_sent <= 0){
-			// 	printf("\nConnection closed");
-			// 	break;
-			// }
-		}//end conversation
+		}
 		close(conn_sock);	
+		if(f==-1)
+			break;
 	}
-	
+	ghi_file(acc);
 	close(listen_sock);
 	free(acc);
 	return 0;
